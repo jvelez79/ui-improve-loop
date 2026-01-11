@@ -13,7 +13,7 @@
       "author": {
         "name": "jvelez79"
       },
-      "source": ".",
+      "source": "./",
       "category": "development",
       "homepage": "https://github.com/jvelez79/ui-improve-loop",
       "tags": ["ui", "design", "review", "automation", "chrome", "loop"]
