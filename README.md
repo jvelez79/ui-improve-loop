@@ -7,7 +7,7 @@ A collection of Claude Code plugins for enhanced development workflows.
 Add this marketplace to Claude Code:
 
 ```bash
-/plugin marketplace add jvelez79/ui-improve-loop
+/plugin marketplace add jvelez79/claude-code-plugins
 ```
 
 Then install individual plugins:

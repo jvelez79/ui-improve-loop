@@ -15,7 +15,7 @@
       },
       "source": "./plugins/ui-improve-loop",
       "category": "development",
-      "homepage": "https://github.com/jvelez79/ui-improve-loop",
+      "homepage": "https://github.com/jvelez79/claude-code-plugins",
       "tags": ["ui", "design", "review", "automation", "chrome", "loop"]
     }
   ]
