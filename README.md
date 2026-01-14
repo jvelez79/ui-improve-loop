@@ -36,6 +36,32 @@ Automatically evaluates web application UI quality, generates improvement recomm
 
 [View plugin documentation](./plugins/ui-improve-loop/README.md)
 
+### dev-workflow
+
+**Feature development workflow with specialized agents.**
+
+Orchestrates a complete feature development pipeline from idea to implementation, using specialized agents for each phase: requirements gathering, technical specification, task planning, implementation, E2E testing, and code review.
+
+**Commands:**
+- `/dev-workflow:feature` - Start feature development workflow
+
+**Agents:**
+- `idea-refiner` - Clarifies requirements through dialogue
+- `spec-writer` - Creates technical specifications
+- `task-planner` - Breaks down into atomic tasks
+- `implementer` - Writes code and tests
+- `e2e-tester` - Tests in live browser
+- `reviewer` - Code review and approval
+
+**Options:**
+- `--from <agent>` - Resume from specific agent
+- `--auto` - No confirmations between agents
+- `--skip-e2e` - Skip browser testing
+- `--skip-review` - Skip code review
+- `--linear` - Create Linear tasks
+
+[View plugin documentation](./plugins/dev-workflow/README.md)
+
 ## Adding New Plugins
 
 To add a new plugin to this marketplace:

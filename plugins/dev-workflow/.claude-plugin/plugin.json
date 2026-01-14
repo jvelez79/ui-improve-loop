@@ -1,0 +1,11 @@
+{
+  "name": "dev-workflow",
+  "version": "1.0.0",
+  "description": "Feature development workflow orchestrating specialized agents: Idea Refiner, Spec Writer, Task Planner, Implementer, E2E Tester, and Reviewer",
+  "author": {
+    "name": "jvelez79"
+  },
+  "repository": "https://github.com/jvelez79/claude-code-plugins",
+  "license": "MIT",
+  "keywords": ["workflow", "development", "feature", "agents", "idea-refiner", "spec-writer", "task-planner", "implementer", "e2e-tester", "reviewer"]
+}
