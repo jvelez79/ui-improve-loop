@@ -1,0 +1,11 @@
+{
+  "name": "voice-notifications",
+  "version": "1.0.0",
+  "description": "Notificaciones de voz contextuales en español usando Chatterbox TTS",
+  "author": {
+    "name": "jvelez79"
+  },
+  "repository": "https://github.com/jvelez79/claude-code-plugins",
+  "license": "MIT",
+  "keywords": ["tts", "voice", "notifications", "accessibility", "chatterbox"]
+}
