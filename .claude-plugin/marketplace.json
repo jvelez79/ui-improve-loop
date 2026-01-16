@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jcv-claude-code-plugins",
-  "description": "Collection of Claude Code plugins: UI improvement automation, feature development workflow, and voice notifications",
+  "description": "Collection of Claude Code plugins: UI improvement automation, feature development workflow, voice notifications, and business advisor",
   "owner": {
     "name": "jvelez79"
   },
@@ -41,6 +41,18 @@
       "category": "productivity",
       "homepage": "https://github.com/jvelez79/claude-code-plugins",
       "tags": ["tts", "voice", "notifications", "accessibility", "chatterbox"]
+    },
+    {
+      "name": "business-advisor",
+      "description": "Consultor de negocios integrado con tu codebase - valida ideas, prioriza features, planifica lanzamientos, investiga mercados, análisis financiero, pricing y user personas",
+      "version": "1.0.0",
+      "author": {
+        "name": "jvelez79"
+      },
+      "source": "./plugins/business-advisor",
+      "category": "productivity",
+      "homepage": "https://github.com/jvelez79/claude-code-plugins",
+      "tags": ["business", "strategy", "validation", "prioritization", "launch", "market-research", "pricing", "personas", "financial"]
     }
   ]
 }
