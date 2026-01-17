@@ -1,29 +1,15 @@
 #!/usr/bin/env python3
 """
 Voice Notifications - TTS Script
-Interfaz con Chatterbox TTS para sintetizar y reproducir voz.
+Usa el comando 'say' de macOS para síntesis de voz instantánea.
+Fallback a espeak en Linux.
 """
 
 import argparse
 import json
 import sys
-import os
-import tempfile
 import subprocess
 from pathlib import Path
-
-# Verificar instalación de dependencias
-try:
-    import torch
-    import torchaudio
-    from chatterbox.tts import ChatterboxTTS
-except ImportError as e:
-    print(f"Error: Dependencia no instalada: {e}", file=sys.stderr)
-    print("Ejecuta: pip install chatterbox-tts", file=sys.stderr)
-    sys.exit(1)
-
-# Cache global del modelo para evitar recarga
-_model = None
 
 
 def get_plugin_root():
@@ -40,8 +26,8 @@ def load_settings():
 
     default_settings = {
         "enabled": True,
-        "volume": 0.8,
-        "speed": 1.0
+        "voice": "Mónica",  # Voz española de macOS
+        "rate": 200         # Palabras por minuto
     }
 
     try:
@@ -57,119 +43,99 @@ def load_settings():
         return default_settings
 
 
-def get_device():
-    """Detectar el mejor dispositivo disponible para inferencia."""
-    if torch.backends.mps.is_available():
-        return "mps"  # Mac M1/M2
-    elif torch.cuda.is_available():
-        return "cuda"  # NVIDIA GPU
-    else:
-        return "cpu"
-
-
-def get_model():
-    """
-    Obtener el modelo TTS, cargándolo si es necesario.
-    El modelo se cachea globalmente para evitar recarga en cada llamada.
-    """
-    global _model
-    if _model is None:
-        device = get_device()
-        print(f"Debug: Cargando modelo Chatterbox en dispositivo '{device}'...", file=sys.stderr)
-        _model = ChatterboxTTS.from_pretrained(device=device)
-        print("Debug: Modelo cargado exitosamente", file=sys.stderr)
-    return _model
-
-
 def list_voices():
     """
-    Mostrar información sobre voces en Chatterbox.
-    Chatterbox usa voice cloning, no voces predefinidas.
+    Listar voces disponibles en el sistema.
+    En macOS muestra las voces del comando 'say'.
     """
-    print("Chatterbox TTS - Información de Voces")
+    print("Voces disponibles para notificaciones de voz")
     print("-" * 50)
     print()
-    print("Chatterbox usa VOICE CLONING, no voces predefinidas.")
-    print()
-    print("Para usar una voz personalizada:")
-    print("  1. Graba un audio de referencia (10-30 segundos)")
-    print("  2. Guárdalo como archivo WAV")
-    print("  3. Configura la ruta en settings.json:")
-    print()
-    print('     "audio_prompt_path": "/ruta/a/tu/voz.wav"')
-    print()
-    print("Sin audio de referencia, se usa la voz por defecto del modelo.")
-    print()
-    print("Más info: https://github.com/resemble-ai/chatterbox")
+
+    if sys.platform == "darwin":
+        print("Voces españolas en macOS:")
+        print()
+        try:
+            result = subprocess.run(
+                ["say", "-v", "?"],
+                capture_output=True,
+                text=True
+            )
+            # Filtrar voces españolas
+            for line in result.stdout.split("\n"):
+                if "es_" in line or "es-" in line:
+                    print(f"  {line}")
+            print()
+            print("Uso: Configura 'voice' en settings.json con el nombre de la voz")
+            print("Ejemplo: \"voice\": \"Jorge\"")
+        except FileNotFoundError:
+            print("Error: comando 'say' no encontrado", file=sys.stderr)
+    else:
+        print("Voces espeak (Linux):")
+        try:
+            result = subprocess.run(
+                ["espeak", "--voices=es"],
+                capture_output=True,
+                text=True
+            )
+            print(result.stdout)
+        except FileNotFoundError:
+            print("espeak no instalado. Instala con: sudo apt install espeak", file=sys.stderr)
 
 
-def speak(text, audio_prompt_path=None):
+def speak(text: str, voice: str = None, rate: int = None):
     """
-    Sintetizar y reproducir texto usando Chatterbox TTS.
+    Sintetizar y reproducir texto usando TTS del sistema.
+
+    macOS: usa comando 'say'
+    Linux: usa espeak como fallback
 
     Args:
         text: Texto a sintetizar
-        audio_prompt_path: Ruta opcional a archivo WAV para voice cloning
+        voice: Nombre de la voz (ej: Mónica, Paulina)
+        rate: Velocidad en palabras por minuto (macOS) o velocidad espeak (Linux)
     """
     if not text or text.strip() == "":
-        print("Debug: Skipping empty message", file=sys.stderr)
         return
 
     # Truncar mensajes muy largos
     MAX_LENGTH = 500
     if len(text) > MAX_LENGTH:
         text = text[:150] + "..."
-        print("Debug: Mensaje truncado a 150 caracteres", file=sys.stderr)
 
-    # Cargar configuración
+    # Cargar configuración si no se especificaron parámetros
     settings = load_settings()
-
-    # Verificar audio_prompt_path del settings si no se especificó
-    if audio_prompt_path is None:
-        audio_prompt_path = settings.get("audio_prompt_path")
+    voice = voice or settings.get("voice", "Jorge")
+    rate = rate or settings.get("rate", 200)
 
     try:
-        # Obtener modelo
-        model = get_model()
-
-        print(f"Debug: Generando audio para: '{text[:50]}...'", file=sys.stderr)
-
-        # Generar audio
-        if audio_prompt_path and os.path.exists(audio_prompt_path):
-            print(f"Debug: Usando voice cloning con: {audio_prompt_path}", file=sys.stderr)
-            wav = model.generate(text, audio_prompt_path=audio_prompt_path)
+        if sys.platform == "darwin":
+            # macOS - usar comando 'say'
+            cmd = ["say", "-v", voice, "-r", str(rate), text]
+            subprocess.run(cmd, check=True)
         else:
-            wav = model.generate(text)
+            # Linux - usar espeak como fallback
+            # espeak usa -s para velocidad (80-450, default 175)
+            espeak_speed = min(450, max(80, rate))
+            cmd = ["espeak", "-v", "es", "-s", str(espeak_speed), text]
+            subprocess.run(cmd, check=True)
 
-        # Guardar a archivo temporal
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            temp_path = f.name
-
-        torchaudio.save(temp_path, wav, model.sr)
-        print(f"Debug: Audio guardado en {temp_path}", file=sys.stderr)
-
-        # Reproducir audio (macOS)
-        print("Debug: Reproduciendo audio...", file=sys.stderr)
-        subprocess.run(["afplay", temp_path], check=True)
-
-        # Limpiar archivo temporal
-        os.unlink(temp_path)
-        print("Debug: Reproducción completada", file=sys.stderr)
-
-    except FileNotFoundError:
-        print("Error: 'afplay' no encontrado. Este script requiere macOS.", file=sys.stderr)
-        print("Para Linux, instala 'aplay' o 'paplay' y modifica el script.", file=sys.stderr)
+    except FileNotFoundError as e:
+        if sys.platform == "darwin":
+            print("Error: comando 'say' no encontrado", file=sys.stderr)
+        else:
+            print("Error: espeak no instalado. Instala con: sudo apt install espeak", file=sys.stderr)
         sys.exit(1)
 
-    except Exception as e:
-        print(f"Error sintetizando voz: {e}", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Error ejecutando TTS: {e}", file=sys.stderr)
         sys.exit(1)
 
 
 def main():
     """Punto de entrada principal del script."""
     parser = argparse.ArgumentParser(
-        description="Voice Notifications TTS - Sintetiza texto a voz usando Chatterbox"
+        description="Voice Notifications TTS - Sintetiza texto a voz usando sistema TTS"
     )
 
     parser.add_argument(
@@ -179,24 +145,29 @@ def main():
     )
 
     parser.add_argument(
-        "--audio-prompt",
+        "--voice",
         type=str,
-        help="Ruta a archivo WAV para voice cloning (opcional)"
+        help="Nombre de la voz (ej: Mónica, Paulina)"
+    )
+
+    parser.add_argument(
+        "--rate",
+        type=int,
+        help="Velocidad en palabras por minuto (default: 200)"
     )
 
     parser.add_argument(
         "--list-voices",
         action="store_true",
-        help="Mostrar información sobre voces"
+        help="Mostrar voces disponibles"
     )
 
     args = parser.parse_args()
 
-    # Routing de comandos
     if args.list_voices:
         list_voices()
     elif args.text:
-        speak(args.text, args.audio_prompt)
+        speak(args.text, args.voice, args.rate)
     else:
         parser.print_help()
         sys.exit(1)

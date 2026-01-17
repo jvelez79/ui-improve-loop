@@ -1,15 +1,16 @@
 # Voice Notifications Plugin
 
-Plugin de Claude Code que proporciona notificaciones de voz contextuales en español usando Chatterbox TTS. El plugin intercepta eventos del ciclo de vida del agente para informar al usuario sobre el estado de las tareas sin necesidad de monitorear visualmente la terminal.
+Plugin de Claude Code que proporciona notificaciones de voz instantáneas en español usando el TTS nativo del sistema (macOS `say` / Linux espeak). El plugin intercepta eventos del ciclo de vida del agente para informar al usuario sobre el estado de las tareas sin necesidad de monitorear visualmente la terminal.
 
 ## Características
 
-- Notificaciones de voz al completar tareas
+- Notificaciones de voz instantáneas (<100ms de latencia)
 - Alertas cuando Claude necesita atención del usuario
 - Detección automática de errores con mensajes contextuales
-- Configuración flexible (habilitar/deshabilitar, cambiar voz, ajustar volumen y velocidad)
+- Configuración flexible (habilitar/deshabilitar, cambiar voz, ajustar velocidad)
 - Mensajes en español naturales y concisos
 - Ejecución no bloqueante (background)
+- Sin dependencias externas (usa TTS del sistema)
 
 ## Requisitos
 
@@ -20,29 +21,22 @@ Plugin de Claude Code que proporciona notificaciones de voz contextuales en espa
   python3 --version
   ```
 
-- **jq** (para parsing JSON en bash)
+- **jq** (opcional, para parsing JSON en bash)
   ```bash
   # macOS
   brew install jq
 
   # Linux (Ubuntu/Debian)
   sudo apt install jq
-
-  # Windows (Git Bash)
-  # Incluido en Git for Windows
   ```
 
-### Python
+### TTS del sistema
 
-- **Chatterbox TTS** (Resemble AI)
+- **macOS**: Incluido por defecto (comando `say`)
+- **Linux**: Instalar espeak
   ```bash
-  pip install chatterbox-tts
+  sudo apt install espeak
   ```
-
-  Dependencias adicionales según el sistema operativo:
-  - **Linux**: `sudo apt install libsndfile1`
-  - **macOS**: Incluidas por defecto
-  - **Windows**: Puede requerir VC++ Redistributable
 
 ## Instalación
 
@@ -84,16 +78,13 @@ Si ves una lista de voces disponibles, la instalación fue exitosa.
 /voice-notifications:config --list-voices
 
 # Cambiar voz
-/voice-notifications:config --voice "es-ES-Standard-B"
+/voice-notifications:config --voice Paulina
 
-# Ajustar volumen (0.0 a 1.0)
-/voice-notifications:config --volume 0.6
-
-# Ajustar velocidad de habla (0.5 a 2.0)
-/voice-notifications:config --speed 1.2
+# Ajustar velocidad de habla (80 a 300 palabras/min)
+/voice-notifications:config --rate 180
 
 # Configurar múltiples opciones a la vez
-/voice-notifications:config --voice "es-MX-Standard-A" --volume 0.7 --speed 1.1
+/voice-notifications:config --voice Jorge --rate 200
 ```
 
 ### Funcionamiento automático
@@ -120,65 +111,62 @@ Estructura:
 ```json
 {
   "enabled": true,
-  "voice": "es-ES-Standard-A",
-  "volume": 0.8,
-  "speed": 1.0
+  "voice": "Jorge",
+  "rate": 200
 }
 ```
 
 Campos:
 - **enabled** (boolean): Habilitar/deshabilitar el plugin
-- **voice** (string): Identificador de voz de Chatterbox
-- **volume** (number 0.0-1.0): Volumen de reproducción
-- **speed** (number 0.5-2.0): Velocidad de habla
+- **voice** (string): Nombre de la voz del sistema
+- **rate** (number 80-300): Velocidad de habla en palabras por minuto
 
 ## Voces disponibles
 
-El plugin soporta las siguientes voces en español (según disponibilidad en Chatterbox):
+### macOS
 
-### España (es-ES)
-- `es-ES-Standard-A` (Femenina) - **Default**
-- `es-ES-Standard-B` (Masculina)
-- `es-ES-Standard-C` (Femenina)
-- `es-ES-Standard-D` (Femenina)
-- `es-ES-Wavenet-A` (Femenina, alta calidad)
-- `es-ES-Wavenet-B` (Masculina, alta calidad)
-- `es-ES-Wavenet-C` (Femenina, alta calidad)
-- `es-ES-Wavenet-D` (Femenina, alta calidad)
+Voces españolas incluidas en el sistema:
 
-### México (es-MX)
-- `es-MX-Standard-A` (Femenina)
-- `es-MX-Standard-B` (Masculina)
-- `es-MX-Wavenet-A` (Femenina, alta calidad)
-- `es-MX-Wavenet-B` (Masculina, alta calidad)
+| Voz | Región | Tipo |
+|-----|--------|------|
+| Jorge | España | Masculina |
+| Mónica | España | Femenina |
+| Paulina | México | Femenina |
+| Juan | México | Masculina |
 
-### Estados Unidos (es-US)
-- `es-US-Standard-A` (Femenina)
-- `es-US-Standard-B` (Masculina)
-- `es-US-Wavenet-A` (Femenina, alta calidad)
-- `es-US-Wavenet-B` (Masculina, alta calidad)
+Para ver todas las voces españolas disponibles:
+```bash
+say -v '?' | grep es_
+```
 
-Nota: Las voces Wavenet ofrecen mayor calidad pero pueden requerir más recursos.
+Algunas voces pueden requerir descarga en **Ajustes del Sistema > Accesibilidad > Contenido hablado**.
+
+### Linux (espeak)
+
+Voces españolas de espeak:
+```bash
+espeak --voices=es
+```
 
 ## Troubleshooting
 
-### Chatterbox no instalado
+### macOS: Voz no encontrada
 
-**Error**: `Error: chatterbox no instalado. Ejecuta: pip install chatterbox`
+**Error**: La voz especificada no está instalada
+
+**Solución**:
+1. Ir a **Ajustes del Sistema > Accesibilidad > Contenido hablado**
+2. Descargar voces españolas adicionales
+3. O usar una voz por defecto: `Jorge`, `Paulina`
+
+### Linux: espeak no instalado
+
+**Error**: `espeak no instalado`
 
 **Solución**:
 ```bash
-pip install chatterbox-tts
+sudo apt install espeak
 ```
-
-### Sin dispositivo de audio
-
-**Error**: `Error: Sistema sin dispositivo de audio o driver no disponible`
-
-**Solución**:
-- Verificar que tu sistema tenga un dispositivo de audio configurado
-- En Linux, puede ser necesario instalar: `sudo apt install pulseaudio`
-- Verificar que el volumen del sistema no esté en mudo
 
 ### jq no disponible
 
@@ -200,14 +188,16 @@ sudo apt install jq
    /voice-notifications:config
    ```
 
-2. Verificar que Chatterbox esté instalado:
+2. Verificar que el sistema tenga TTS:
    ```bash
-   python3 -c "import chatterbox; print('OK')"
+   # macOS
+   say "Prueba"
+
+   # Linux
+   espeak "Prueba"
    ```
 
-3. Verificar logs en stderr al ejecutar tareas en Claude Code
-
-4. Probar manualmente el script TTS:
+3. Probar manualmente el script TTS:
    ```bash
    cd plugins/voice-notifications
    ./scripts/speak.py --text "Prueba de voz"
@@ -215,14 +205,7 @@ sudo apt install jq
 
 ### Settings.json corrupto
 
-Si el archivo de configuración se corrompe:
-
-```bash
-cd plugins/voice-notifications
-./scripts/init-settings.sh
-```
-
-O eliminar y dejar que se recree:
+Si el archivo de configuración se corrompe, eliminar y recrear:
 ```bash
 rm plugins/voice-notifications/.claude-plugin/settings.json
 /voice-notifications:config --enable
@@ -238,9 +221,12 @@ Hook Triggered (Stop / Notification)
 hooks/{stop,notification}-hook.sh
     ↓ (lee estado y contexto)
     ↓
-scripts/speak.py (Chatterbox TTS)
+scripts/speak.py
     ↓
-Audio Output (Sistema)
+macOS: say -v Jorge "mensaje"
+Linux: espeak -v es "mensaje"
+    ↓
+Audio Output (<100ms)
 ```
 
 ### Componentes
@@ -250,7 +236,7 @@ Audio Output (Sistema)
    - `notification-hook.sh`: Intercepta notificaciones del sistema
 
 2. **Script TTS**:
-   - `speak.py`: Interfaz con Chatterbox TTS para sintetizar voz
+   - `speak.py`: Interfaz con TTS nativo del sistema
 
 3. **Configuración**:
    - `settings.json`: Preferencias del usuario
@@ -273,12 +259,10 @@ plugins/voice-notifications/
 │   ├── stop-hook.sh         # Hook para tareas completadas
 │   └── notification-hook.sh # Hook para notificaciones
 ├── scripts/
-│   ├── speak.py             # Script Python para Chatterbox TTS
-│   └── init-settings.sh     # Script de inicialización
+│   └── speak.py             # Script Python para TTS del sistema
 ├── commands/
 │   └── config.md            # Comando de configuración
 ├── README.md                # Este archivo
-├── SPEC.md                  # Especificación técnica
 └── CLAUDE.md                # Guía para Claude Code
 ```
 
@@ -287,7 +271,7 @@ plugins/voice-notifications/
 1. **Test Hook Stop**:
    ```
    Ejecutar tarea simple: "Crea un archivo test.txt"
-   → Debería sonar: "La tarea ha sido completada: [descripción]"
+   → Debería sonar instantáneamente: "La tarea ha sido completada: [descripción]"
    ```
 
 2. **Test Hook Notification**:
@@ -307,7 +291,7 @@ plugins/voice-notifications/
 
 4. **Test Cambio de voz**:
    ```bash
-   /voice-notifications:config --voice "es-ES-Standard-B"
+   /voice-notifications:config --voice Paulina
    # Ejecutar tarea → Debería usar la nueva voz
    ```
 
@@ -342,14 +326,10 @@ Futuras mejoras planeadas:
 
 - Cola de mensajes para evitar solapamiento de audios
 - Notificaciones visuales como fallback
-- Soporte multiidioma automático
 - Integración con sistema de notificaciones del OS
-- Transcripts de audio guardados
-- Detección inteligente de errores con LLM
 - Triggers personalizables
 
 ## Referencias
 
-- [Chatterbox TTS](https://github.com/resemble-ai/chatterbox) - Biblioteca de síntesis de voz
 - [Claude Code](https://claude.com/claude-code) - CLI oficial de Claude
 - [Plugin Marketplace](https://github.com/jvelez79/claude-code-plugins) - Repositorio de plugins

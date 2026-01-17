@@ -1,6 +1,5 @@
 {
   "enabled": true,
-  "voice": "es-ES-Standard-A",
-  "volume": 0.8,
-  "speed": 1.0
+  "voice": "Mónica",
+  "rate": 200
 }

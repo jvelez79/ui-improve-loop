@@ -1,7 +1,7 @@
 ---
 name: config
-description: Configurar notificaciones de voz (habilitar/deshabilitar, cambiar voz, ajustar volumen y velocidad)
-argument-hint: [--enable|--disable] [--voice nombre_voz] [--volume 0-1] [--speed 0.5-2.0] [--list-voices]
+description: Configurar notificaciones de voz (habilitar/deshabilitar, cambiar voz, ajustar velocidad)
+argument-hint: [--enable|--disable] [--voice nombre_voz] [--rate 80-300] [--list-voices]
 allowed-tools:
   - Read
   - Write
@@ -34,22 +34,22 @@ Deshabilita las notificaciones de voz.
 
 ### `--voice <nombre_voz>`
 Cambia la voz utilizada para las notificaciones.
+- macOS: Jorge, Paulina, Juan, Mónica (voces españolas del sistema)
+- Linux: voces de espeak
 - Validación: El nombre debe ser una string no vacía
 - Recomendación: Sugerir ejecutar `--list-voices` primero
 - Acción: Establece `voice: "<nombre_voz>"` en settings.json
 
-### `--volume <valor>`
-Ajusta el volumen de las notificaciones (0.0 a 1.0).
-- Validación: Debe ser un número entre 0.0 y 1.0
-- Acción: Establece `volume: <valor>` en settings.json
-
-### `--speed <valor>`
-Ajusta la velocidad de habla (0.5 a 2.0).
-- Validación: Debe ser un número entre 0.5 y 2.0
-- Acción: Establece `speed: <valor>` en settings.json
+### `--rate <valor>`
+Ajusta la velocidad de habla (palabras por minuto).
+- Validación: Debe ser un número entre 80 y 300
+- Default: 200
+- Acción: Establece `rate: <valor>` en settings.json
 
 ### `--list-voices`
-Lista las voces disponibles en Chatterbox TTS.
+Lista las voces españolas disponibles en el sistema.
+- macOS: Usa comando `say -v '?'` filtrado por voces españolas
+- Linux: Usa `espeak --voices=es`
 - Acción: Ejecutar `${CLAUDE_PLUGIN_ROOT}/scripts/speak.py --list-voices` usando Bash tool
 - Mostrar el output al usuario
 
@@ -59,8 +59,7 @@ Antes de escribir al archivo, verifica:
 
 1. **enabled**: Debe ser booleano (true/false)
 2. **voice**: Debe ser string no vacía
-3. **volume**: Debe ser número entre 0.0 y 1.0
-4. **speed**: Debe ser número entre 0.5 y 2.0
+3. **rate**: Debe ser número entre 80 y 300
 
 Si alguna validación falla:
 - **NO escribas** el archivo
@@ -72,11 +71,21 @@ Si alguna validación falla:
 ```json
 {
   "enabled": true,
-  "voice": "es-ES-Standard-A",
-  "volume": 0.8,
-  "speed": 1.0
+  "voice": "Jorge",
+  "rate": 200
 }
 ```
+
+## Voces españolas disponibles en macOS
+
+| Voz | Región | Descripción |
+|-----|--------|-------------|
+| Jorge | España | Voz masculina española |
+| Paulina | México | Voz femenina mexicana |
+| Juan | México | Voz masculina mexicana |
+| Mónica | España | Voz femenina española |
+
+Nota: Las voces disponibles pueden variar según la versión de macOS. Usa `--list-voices` para ver las voces instaladas.
 
 ## Flujo de ejecución
 
@@ -95,27 +104,27 @@ Tu proceso:
 ### Ejemplo 2: Cambiar voz
 
 ```
-Usuario: /voice-notifications:config --voice "es-ES-Standard-B"
+Usuario: /voice-notifications:config --voice Paulina
 ```
 
 Tu proceso:
 1. Read settings.json
-2. Modificar objeto: `{..."voice": "es-ES-Standard-B"...}`
+2. Modificar objeto: `{..."voice": "Paulina"...}`
 3. Write de vuelta
-4. Confirmar: "Voz cambiada a: es-ES-Standard-B"
+4. Confirmar: "Voz cambiada a: Paulina"
 
-### Ejemplo 3: Ajustar volumen y velocidad
+### Ejemplo 3: Ajustar velocidad
 
 ```
-Usuario: /voice-notifications:config --volume 0.6 --speed 1.2
+Usuario: /voice-notifications:config --rate 180
 ```
 
 Tu proceso:
 1. Read settings.json
-2. Validar: 0.0 <= 0.6 <= 1.0 ✓, 0.5 <= 1.2 <= 2.0 ✓
-3. Modificar objeto: `{..."volume": 0.6, "speed": 1.2...}`
+2. Validar: 80 <= 180 <= 300 ✓
+3. Modificar objeto: `{..."rate": 180...}`
 4. Write de vuelta
-5. Confirmar: "Configuración actualizada: volumen=0.6, velocidad=1.2"
+5. Confirmar: "Velocidad ajustada a: 180 palabras por minuto"
 
 ### Ejemplo 4: Listar voces
 
@@ -140,12 +149,11 @@ Tu proceso:
    ```
    Configuración actual:
    - Habilitado: true
-   - Voz: es-ES-Standard-A
-   - Volumen: 0.8
-   - Velocidad: 1.0
+   - Voz: Jorge
+   - Velocidad: 200 palabras/min
 
    Uso: /voice-notifications:config [opciones]
-   Opciones disponibles: --enable, --disable, --voice, --volume, --speed, --list-voices
+   Opciones disponibles: --enable, --disable, --voice, --rate, --list-voices
    ```
 
 ## Edge cases
@@ -156,9 +164,8 @@ Si el archivo no existe al intentar leer:
    ```json
    {
      "enabled": true,
-     "voice": "es-ES-Standard-A",
-     "volume": 0.8,
-     "speed": 1.0
+     "voice": "Jorge",
+     "rate": 200
    }
    ```
 2. Aplicar los cambios solicitados

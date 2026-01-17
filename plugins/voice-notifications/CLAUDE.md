@@ -4,9 +4,11 @@ Esta guía explica cómo funciona el plugin voice-notifications internamente, pa
 
 ## Overview
 
-El plugin voice-notifications intercepta eventos del ciclo de vida del agente Claude Code (Stop, Notification) para generar notificaciones de voz contextuales en español usando Chatterbox TTS.
+El plugin voice-notifications intercepta eventos del ciclo de vida del agente Claude Code (Stop, Notification) para generar notificaciones de voz contextuales en español usando el TTS nativo del sistema (macOS `say` o espeak en Linux).
 
 **Objetivo**: Permitir al usuario trabajar sin monitorear visualmente la terminal, recibiendo feedback auditivo sobre el estado de las tareas.
+
+**Latencia**: <100ms (vs 15-16s con Chatterbox TTS neural)
 
 ## Arquitectura
 
@@ -29,11 +31,11 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
    ↓
 8. stop-hook.sh invoca speak.py en background
    ↓
-9. speak.py carga settings (voz, volumen, velocidad)
+9. speak.py carga settings (voz, rate)
    ↓
-10. speak.py usa Chatterbox TTS para sintetizar
+10. speak.py usa comando 'say' (macOS) o espeak (Linux)
     ↓
-11. Audio se reproduce en el sistema
+11. Audio se reproduce INSTANTÁNEAMENTE (<100ms)
     ↓
 12. Hooks retornan exit 0 (no bloquean Claude Code)
 ```
@@ -63,7 +65,7 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 
 **Patrones importantes**:
 - Siempre retornan `exit 0` para no bloquear Claude Code
-- Ejecutan `speak.py` en background con `&`
+- Ejecutan `speak.py` en background con `nohup`
 - Tienen fallback si `jq` no está disponible
 - Sanitizan inputs antes de pasar a `speak.py`
 - Logs a stderr con prefijo `[voice-notifications:*]`
@@ -71,20 +73,23 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 #### 2. Script TTS (Python)
 
 **speak.py**:
-- Responsabilidad: Interfaz con Chatterbox TTS
+- Responsabilidad: Interfaz con TTS nativo del sistema
+- Implementación:
+  - macOS: Usa comando `say` con voces españolas del sistema
+  - Linux: Usa `espeak` como fallback
 - CLI Interface:
   ```bash
   speak.py --text "Mensaje"               # Sintetizar y reproducir
-  speak.py --text "Mensaje" --voice "voz" # Con voz específica
-  speak.py --list-voices                  # Listar voces
+  speak.py --text "Mensaje" --voice Jorge # Con voz específica
+  speak.py --rate 180                     # Ajustar velocidad
+  speak.py --list-voices                  # Listar voces disponibles
   ```
 - Funciones clave:
   - `load_settings()`: Lee settings.json, retorna defaults si falla
-  - `list_voices()`: Lista voces disponibles en Chatterbox
-  - `speak()`: Sintetiza y reproduce texto
+  - `list_voices()`: Lista voces españolas disponibles en el sistema
+  - `speak()`: Ejecuta comando TTS del sistema
 - Manejo de errores:
-  - Si Chatterbox no instalado → print a stderr, exit 1
-  - Si audio device no disponible → print a stderr, exit 1
+  - Si `say` no disponible → print a stderr, exit 1
   - Si mensaje vacío → skip silenciosamente
 
 #### 3. Configuración
@@ -93,9 +98,8 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 ```json
 {
   "enabled": true,
-  "voice": "es-ES-Standard-A",
-  "volume": 0.8,
-  "speed": 1.0
+  "voice": "Jorge",
+  "rate": 200
 }
 ```
 
@@ -103,11 +107,21 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 - Schema validado por comando config.md
 - Creado automáticamente con defaults si no existe
 
+**Voces españolas disponibles (macOS)**:
+| Voz | Región | Tipo |
+|-----|--------|------|
+| Jorge | España | Masculina |
+| Mónica | España | Femenina |
+| Paulina | México | Femenina |
+| Juan | México | Masculina |
+
 **hooks.json**:
 ```json
 {
-  "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"}]}],
-  "Notification": [{"matcher": "", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/notification-hook.sh"}]}]
+  "hooks": {
+    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"}]}],
+    "Notification": [{"matcher": "", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/notification-hook.sh"}]}]
+  }
 }
 ```
 
@@ -126,9 +140,8 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
   - Ejecutar `speak.py --list-voices`
 - Validaciones:
   - `enabled`: boolean
-  - `voice`: string no vacía
-  - `volume`: number 0.0-1.0
-  - `speed`: number 0.5-2.0
+  - `voice`: string no vacía (Jorge, Paulina, Juan, Mónica)
+  - `rate`: number 80-300 (palabras por minuto)
 
 ## Contratos
 
@@ -161,12 +174,13 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 ### speak.py CLI
 
 ```bash
-# Success: exit 0, audio se reproduce
+# Success: exit 0, audio se reproduce instantáneamente
 # Error: exit 1, mensaje a stderr
 
 # Ejemplos:
 speak.py --text "La tarea ha sido completada"
-speak.py --text "Claude necesita tu atención" --voice "es-ES-Standard-B"
+speak.py --text "Claude necesita tu atención" --voice Paulina
+speak.py --text "Error detectado" --rate 180
 speak.py --list-voices
 ```
 
@@ -200,15 +214,15 @@ speak.py --list-voices
 
 | Escenario | Comportamiento |
 |-----------|----------------|
-| Chatterbox no instalado | speak.py print error a stderr, exit 1. Hook continúa, no bloquea |
+| macOS sin voz instalada | say usa voz default del sistema |
+| Linux sin espeak | speak.py print error a stderr, exit 1 |
 | Settings.json corrupto | speak.py usa defaults, log warning |
 | Settings.json no existe | speak.py usa defaults, log warning |
 | Mensaje vacío | speak.py skip silenciosamente |
-| Múltiples hooks concurrentes | Ejecutan independientemente, audios pueden solaparse (aceptable) |
+| Múltiples hooks concurrentes | Ejecutan independientemente, audios pueden solaparse |
 | Transcript sin mensajes | Hook skip, exit 0 |
-| Sistema sin audio device | speak.py falla, log error, hook exit 0 |
 | Mensaje > 500 chars | Truncado a 150 chars + "..." |
-| Voz no disponible | speak.py usa default, log warning |
+| Voz no disponible | say usa default, log warning |
 | jq no disponible | Hooks usan fallback con grep/sed |
 
 ## Convenciones de código
@@ -227,11 +241,10 @@ speak.py --list-voices
 
 - Shebang: `#!/usr/bin/env python3`
 - Docstrings en funciones públicas
-- Try/except para imports de dependencias externas
 - Print errores a stderr: `print("Error...", file=sys.stderr)`
 - Exit codes: 0 success, 1 error
 - Pathlib para manejo de paths
-- Type hints opcionales pero recomendados
+- Dependencias mínimas (solo stdlib)
 
 ### JSON
 
@@ -252,8 +265,8 @@ ls -R plugins/voice-notifications/
 ls -l plugins/voice-notifications/hooks/*.sh
 ls -l plugins/voice-notifications/scripts/*.py
 
-# 3. Verificar Chatterbox
-python3 -c "import chatterbox; print('OK')"
+# 3. Verificar voces españolas disponibles (macOS)
+say -v '?' | grep es_
 
 # 4. Verificar jq
 command -v jq && echo "OK"
@@ -269,12 +282,12 @@ cd plugins/voice-notifications
 ```bash
 # Test stop-hook.sh
 echo '{"transcript":[{"role":"assistant","content":"Tarea completada exitosamente"}]}' | \
-  CLAUDE_PLUGIN_ROOT=/Users/juanca/Projects/ui-improve-loop/plugins/voice-notifications \
+  CLAUDE_PLUGIN_ROOT=/path/to/plugins/voice-notifications \
   ./hooks/stop-hook.sh
 
 # Test notification-hook.sh
 echo '{"message":"Se requiere tu confirmación"}' | \
-  CLAUDE_PLUGIN_ROOT=/Users/juanca/Projects/ui-improve-loop/plugins/voice-notifications \
+  CLAUDE_PLUGIN_ROOT=/path/to/plugins/voice-notifications \
   ./hooks/notification-hook.sh
 ```
 
@@ -337,7 +350,7 @@ Permitir al usuario definir patrones custom en settings.json:
 
 1. **Test básico**:
    - Ejecutar tarea simple en Claude Code
-   - Verificar audio al completar
+   - Verificar audio al completar (debe ser instantáneo)
 
 2. **Test deshabilitado**:
    - `/voice-notifications:config --disable`
@@ -348,15 +361,15 @@ Permitir al usuario definir patrones custom en settings.json:
    - Verificar mensaje de error
 
 4. **Test configuración**:
-   - Cambiar voz, volumen, velocidad
+   - Cambiar voz, rate
    - Verificar que se apliquen los cambios
 
 ### Métricas
 
-- Hook ejecuta en < 200ms (sin contar audio)
-- Audio comienza en < 2 segundos desde trigger
+- Hook ejecuta en < 50ms
+- Audio comienza en < 100ms desde trigger
 - No bloquea ejecución de Claude Code
-- Graceful degradation sin Chatterbox
+- Sin dependencias externas (solo Python stdlib + comandos del sistema)
 
 ## Notas importantes para Claude
 
@@ -374,7 +387,6 @@ Al trabajar con este plugin:
 
 ## Referencias
 
-- SPEC.md: Especificación técnica completa
 - README.md: Documentación de usuario
 - Ejemplo de plugin: `../dev-workflow/`
 - Ejemplo de hooks: `../ui-improve-loop/hooks/`
