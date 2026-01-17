@@ -144,13 +144,12 @@ main() {
     # Truncar mensaje si es muy largo (seguridad adicional)
     message="${message:0:500}"
 
-    # Invocar speak.py en background para no bloquear
+    # Invocar speak.py con nohup para que sobreviva al cierre del hook
     if [[ -x "$SPEAK_SCRIPT" ]]; then
-        debug_log "Invocando speak.py en background"
-        "$SPEAK_SCRIPT" --text "$message" &
-        # Obtener PID del proceso background
-        local speak_pid=$!
-        debug_log "speak.py iniciado con PID $speak_pid"
+        debug_log "Invocando speak.py con nohup"
+        nohup "$SPEAK_SCRIPT" --text "$message" > /dev/null 2>&1 &
+        disown
+        debug_log "speak.py iniciado en background"
     else
         debug_log "Error: speak.py no encontrado o no ejecutable en $SPEAK_SCRIPT"
     fi
