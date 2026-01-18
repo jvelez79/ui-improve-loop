@@ -100,6 +100,25 @@ Business consulting with 7 specialized agents: idea validation, feature prioriti
 4. Create `CLAUDE.md` documenting the plugin architecture
 5. Add entry to `.claude-plugin/marketplace.json`
 
+## Updating Plugins
+
+**Important:** When adding new commands, agents, skills, or any changes to a plugin, you MUST increment the version in `.claude-plugin/plugin.json` before pushing.
+
+Claude Code caches plugins by version. If the version number doesn't change, users won't see updates even after running `/plugin update`.
+
+```bash
+# After making changes to a plugin:
+1. Increment version in plugins/<name>/.claude-plugin/plugin.json (e.g., 1.0.0 → 1.1.0)
+2. Commit and push changes
+3. Users can then update with: /plugin update <plugin-name>
+```
+
+If a user reports not seeing updates, they can force reinstall:
+```bash
+/plugin uninstall <plugin-name>
+/plugin install <plugin-name>
+```
+
 ## Plugin Installation
 
 ```bash
