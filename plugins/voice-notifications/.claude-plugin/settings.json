@@ -1,5 +1,12 @@
 {
   "enabled": true,
+  "tts_engine": "system",
   "voice": "Mónica",
-  "rate": 200
+  "rate": 200,
+  "chatterbox": {
+    "device": "mps",
+    "voice_sample": null,
+    "exaggeration": 1.0
+  },
+  "fallback_to_system": true
 }

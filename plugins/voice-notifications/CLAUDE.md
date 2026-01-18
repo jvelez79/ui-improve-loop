@@ -4,11 +4,13 @@ Esta guía explica cómo funciona el plugin voice-notifications internamente, pa
 
 ## Overview
 
-El plugin voice-notifications intercepta eventos del ciclo de vida del agente Claude Code (Stop, Notification) para generar notificaciones de voz contextuales en español usando el TTS nativo del sistema (macOS `say` o espeak en Linux).
+El plugin voice-notifications intercepta eventos del ciclo de vida del agente Claude Code (Stop, Notification) para generar notificaciones de voz contextuales en español usando múltiples motores TTS.
 
 **Objetivo**: Permitir al usuario trabajar sin monitorear visualmente la terminal, recibiendo feedback auditivo sobre el estado de las tareas.
 
-**Latencia**: <100ms (vs 15-16s con Chatterbox TTS neural)
+**Motores TTS disponibles**:
+- **System TTS**: macOS `say` / Linux `espeak` - latencia <100ms
+- **Chatterbox-Turbo**: Neural TTS de alta calidad - latencia ~300-500ms después de carga inicial
 
 ## Arquitectura
 
@@ -31,11 +33,23 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
    ↓
 8. stop-hook.sh invoca speak.py en background
    ↓
-9. speak.py carga settings (voz, rate)
+9. speak.py carga settings (tts_engine, voz, rate, chatterbox config)
    ↓
-10. speak.py usa comando 'say' (macOS) o espeak (Linux)
+10. speak.py ejecuta factory get_tts_engine()
     ↓
-11. Audio se reproduce INSTANTÁNEAMENTE (<100ms)
+┌───────────────────────────────────────────────┐
+│ Decision Engine                               │
+│ ├─ tts_engine == "chatterbox"                 │
+│ │   ├─ Lazy load model (solo primera vez)     │
+│ │   ├─ Detect device (MPS/CUDA/CPU)           │
+│ │   ├─ Generate audio con Chatterbox-Turbo    │
+│ │   ├─ Play audio con sounddevice             │
+│ │   └─ Si falla → Fallback a SystemTTS        │
+│ └─ tts_engine == "system"                     │
+│     └─ Ejecuta say/espeak (instantáneo)       │
+└───────────────────────────────────────────────┘
+    ↓
+11. Audio se reproduce
     ↓
 12. Hooks retornan exit 0 (no bloquean Claude Code)
 ```
@@ -73,23 +87,30 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 #### 2. Script TTS (Python)
 
 **speak.py**:
-- Responsabilidad: Interfaz con TTS nativo del sistema
-- Implementación:
-  - macOS: Usa comando `say` con voces españolas del sistema
-  - Linux: Usa `espeak` como fallback
+- Responsabilidad: Interfaz unificada para múltiples motores TTS
+- Arquitectura:
+  - `TTSEngine` (ABC): Clase base abstracta
+  - `SystemTTS(TTSEngine)`: Implementación para TTS sistema (say/espeak)
+  - `ChatterboxTurboTTS(TTSEngine)`: Implementación para Chatterbox-Turbo
+  - `get_tts_engine(settings)`: Factory function que retorna el engine apropiado
 - CLI Interface:
   ```bash
   speak.py --text "Mensaje"               # Sintetizar y reproducir
-  speak.py --text "Mensaje" --voice Jorge # Con voz específica
-  speak.py --rate 180                     # Ajustar velocidad
-  speak.py --list-voices                  # Listar voces disponibles
+  speak.py --text "Mensaje" --voice Jorge # Con voz específica (solo SystemTTS)
+  speak.py --rate 180                     # Ajustar velocidad (solo SystemTTS)
+  speak.py --list-voices                  # Listar voces disponibles (varía según engine)
   ```
 - Funciones clave:
-  - `load_settings()`: Lee settings.json, retorna defaults si falla
-  - `list_voices()`: Lista voces españolas disponibles en el sistema
-  - `speak()`: Ejecuta comando TTS del sistema
+  - `load_settings()`: Lee settings.json, merge con defaults para retrocompatibilidad
+  - `get_tts_engine()`: Factory que retorna SystemTTS o ChatterboxTurboTTS
+  - `SystemTTS.speak()`: Ejecuta comando TTS del sistema
+  - `ChatterboxTurboTTS._load_model()`: Lazy loading del modelo (solo primera vez)
+  - `ChatterboxTurboTTS._detect_device()`: Detecta MPS/CUDA/CPU
+  - `ChatterboxTurboTTS._play_audio()`: Reproduce audio con sounddevice
 - Manejo de errores:
-  - Si `say` no disponible → print a stderr, exit 1
+  - Si `say`/`espeak` no disponible → print a stderr, exit 1
+  - Si Chatterbox no instalado y `fallback_to_system=true` → usa SystemTTS
+  - Si Chatterbox no instalado y `fallback_to_system=false` → exit 1
   - Si mensaje vacío → skip silenciosamente
 
 #### 3. Configuración
@@ -98,22 +119,44 @@ El plugin voice-notifications intercepta eventos del ciclo de vida del agente Cl
 ```json
 {
   "enabled": true,
+  "tts_engine": "system",
   "voice": "Jorge",
-  "rate": 200
+  "rate": 200,
+  "chatterbox": {
+    "device": "mps",
+    "voice_sample": null,
+    "exaggeration": 1.0
+  },
+  "fallback_to_system": true
 }
 ```
 
 - Ubicación: `.claude-plugin/settings.json`
 - Schema validado por comando config.md
 - Creado automáticamente con defaults si no existe
+- Retrocompatibilidad: Settings sin `tts_engine` funcionan (default a "system")
 
-**Voces españolas disponibles (macOS)**:
+**Campos nuevos (vs versión anterior)**:
+- `tts_engine`: "system" o "chatterbox"
+- `chatterbox`: Configuración específica de Chatterbox-Turbo
+  - `device`: "mps", "cpu", o "cuda"
+  - `voice_sample`: Path a audio de referencia (opcional)
+  - `exaggeration`: Nivel de expresividad (0.0-2.0)
+- `fallback_to_system`: Boolean, usar TTS sistema si Chatterbox falla
+
+**Voces españolas disponibles**:
+
+System TTS (macOS):
 | Voz | Región | Tipo |
 |-----|--------|------|
 | Jorge | España | Masculina |
 | Mónica | España | Femenina |
 | Paulina | México | Femenina |
 | Juan | México | Masculina |
+
+Chatterbox-Turbo:
+- Voz default del modelo (sin configuración)
+- Voice cloning con audio de referencia (avanzado)
 
 **hooks.json**:
 ```json
@@ -218,12 +261,22 @@ speak.py --list-voices
 | Linux sin espeak | speak.py print error a stderr, exit 1 |
 | Settings.json corrupto | speak.py usa defaults, log warning |
 | Settings.json no existe | speak.py usa defaults, log warning |
+| Settings.json sin campos nuevos | Merge con defaults, retrocompatibilidad preservada |
 | Mensaje vacío | speak.py skip silenciosamente |
 | Múltiples hooks concurrentes | Ejecutan independientemente, audios pueden solaparse |
 | Transcript sin mensajes | Hook skip, exit 0 |
 | Mensaje > 500 chars | Truncado a 150 chars + "..." |
 | Voz no disponible | say usa default, log warning |
 | jq no disponible | Hooks usan fallback con grep/sed |
+| **Chatterbox no instalado + fallback=true** | Usa SystemTTS automáticamente, log a stderr |
+| **Chatterbox no instalado + fallback=false** | Error a stderr, exit 1 |
+| **Primera carga de Chatterbox** | Latencia 2-3s (lazy loading), log a stderr |
+| **Ejecuciones subsiguientes Chatterbox** | Modelo reutilizado, latencia ~300-500ms |
+| **MPS no disponible (device=mps)** | Auto-detect, fallback a CPU, log warning |
+| **sounddevice no instalado** | ImportError, mensaje sugiere instalación |
+| **Memoria insuficiente para modelo** | RuntimeError, fallback a SystemTTS si enabled |
+| **device=cuda pero no hay GPU** | Auto-detect, fallback a CPU o MPS |
+| **voice_sample path inválido** | Ignora voice cloning, usa voz default |
 
 ## Convenciones de código
 
@@ -271,10 +324,27 @@ say -v '?' | grep es_
 # 4. Verificar jq
 command -v jq && echo "OK"
 
-# 5. Probar speak.py manualmente
+# 5. Probar speak.py manualmente con SystemTTS
 cd plugins/voice-notifications
 ./scripts/speak.py --text "Prueba de voz"
 ./scripts/speak.py --list-voices
+
+# 6. Verificar instalación de Chatterbox-Turbo (opcional)
+python3 -c "from chatterbox.tts_turbo import ChatterboxTurboTTS; print('Chatterbox-Turbo: OK')"
+
+# 6b. Si da error de token de HuggingFace, autenticarse:
+pip install huggingface_hub
+huggingface-cli login  # Crear token en https://huggingface.co/settings/tokens
+
+# 7. Verificar PyTorch MPS (Apple Silicon)
+python3 -c "import torch; print('MPS disponible:', torch.backends.mps.is_available())"
+
+# 8. Verificar sounddevice
+python3 -c "import sounddevice; print('sounddevice: OK')"
+
+# 9. Probar speak.py con Chatterbox (si instalado)
+# Primero configurar: /voice-notifications:config --engine chatterbox
+./scripts/speak.py --text "Prueba con Chatterbox-Turbo"
 ```
 
 ### Simular hooks manualmente
@@ -299,6 +369,77 @@ Los hooks escriben debug logs a stderr. Para verlos durante ejecución de Claude
 # Claude Code normalmente muestra stderr automáticamente
 # O redirigir a archivo:
 claude ... 2> debug.log
+```
+
+## Arquitectura Multi-Engine
+
+### Patrón de diseño
+
+El plugin usa **Strategy Pattern** con factory:
+
+```python
+# Clase base abstracta
+class TTSEngine(ABC):
+    @abstractmethod
+    def speak(self, text: str, **kwargs) -> None:
+        pass
+
+    @abstractmethod
+    def list_voices(self) -> None:
+        pass
+
+# Implementaciones concretas
+class SystemTTS(TTSEngine):
+    # Implementa speak() con say/espeak
+    pass
+
+class ChatterboxTurboTTS(TTSEngine):
+    # Implementa speak() con Chatterbox-Turbo
+    # Singleton para reutilizar modelo cargado
+    pass
+
+# Factory
+def get_tts_engine(settings: dict) -> TTSEngine:
+    if settings["tts_engine"] == "chatterbox":
+        try:
+            return ChatterboxTurboTTS(settings)
+        except (ImportError, RuntimeError):
+            if settings["fallback_to_system"]:
+                return SystemTTS(settings)
+            raise
+    return SystemTTS(settings)
+```
+
+### Lazy Loading de modelo
+
+ChatterboxTurboTTS usa **Singleton Pattern** para evitar cargar el modelo múltiples veces:
+
+```python
+class ChatterboxTurboTTS(TTSEngine):
+    _instance = None
+    _model = None  # Compartido entre todas las instancias
+
+    def __new__(cls, settings):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def _load_model(self):
+        if self._model is None:  # Solo cargar una vez
+            self._model = ChatterboxTurboTTS.from_pretrained(device=...)
+```
+
+### Device Detection
+
+Auto-detección de hardware con fallback chain:
+
+```python
+def _detect_device(self) -> str:
+    if torch.backends.mps.is_available():
+        return "mps"  # Apple Silicon
+    elif torch.cuda.is_available():
+        return "cuda"  # NVIDIA GPU
+    return "cpu"  # Fallback universal
 ```
 
 ## Extensiones futuras
@@ -344,6 +485,23 @@ Permitir al usuario definir patrones custom en settings.json:
 }
 ```
 
+### Cacheo de audio
+
+Para mensajes repetidos, cachear audio generado:
+
+```python
+# En ChatterboxTurboTTS
+_audio_cache = {}  # {text: wav_array}
+
+def speak(self, text: str):
+    if text in self._audio_cache:
+        wav = self._audio_cache[text]
+    else:
+        wav = self._model.generate(text)
+        self._audio_cache[text] = wav
+    self._play_audio(wav)
+```
+
 ## Testing
 
 ### Manual tests
@@ -366,10 +524,20 @@ Permitir al usuario definir patrones custom en settings.json:
 
 ### Métricas
 
+**SystemTTS**:
 - Hook ejecuta en < 50ms
 - Audio comienza en < 100ms desde trigger
-- No bloquea ejecución de Claude Code
-- Sin dependencias externas (solo Python stdlib + comandos del sistema)
+- Sin dependencias externas
+
+**ChatterboxTurboTTS**:
+- Primera ejecución: 2-3s (carga de modelo)
+- Ejecuciones subsiguientes: 300-500ms
+- Uso de memoria: ~350MB (modelo cargado)
+- Requiere: PyTorch, chatterbox, sounddevice
+
+**Común**:
+- No bloquea ejecución de Claude Code (background)
+- Fallback robusto si Chatterbox falla
 
 ## Notas importantes para Claude
 
@@ -384,6 +552,12 @@ Al trabajar con este plugin:
 7. **MANTENER** mensajes en español natural
 8. **PRESERVAR** compatibilidad con sistemas sin jq (fallbacks)
 9. **TESTEAR** manualmente después de cambios
+10. **RETROCOMPATIBILIDAD**: Settings sin campos nuevos deben funcionar
+11. **FALLBACK**: Chatterbox-Turbo debe tener fallback a SystemTTS por defecto
+12. **LAZY LOADING**: Modelo Chatterbox solo se carga en primera ejecución
+13. **SINGLETON**: ChatterboxTurboTTS debe reutilizar instancia de modelo
+14. **DEVICE AUTO-DETECT**: Si device configurado no disponible, auto-detectar
+15. **LOGS CLAROS**: Siempre usar prefijo `[voice-notifications:speak]` en stderr
 
 ## Referencias
 

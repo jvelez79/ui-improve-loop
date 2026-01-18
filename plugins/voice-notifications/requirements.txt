@@ -1,0 +1,46 @@
+# Voice Notifications Plugin - Dependencias opcionales
+
+# Core dependencies (siempre requerido)
+# Nota: Solo usa Python stdlib para System TTS (say/espeak)
+# No requiere instalación de dependencias externas para funcionalidad básica
+
+# ============================================
+# Chatterbox-Turbo TTS (opcional)
+# ============================================
+# Para obtener calidad de voz superior al TTS del sistema
+
+# PyTorch (necesario para Chatterbox-Turbo)
+# Versión con soporte MPS para Apple Silicon
+torch>=2.0.0
+# torchvision>=0.15.0  # Opcional
+
+# Chatterbox-Turbo TTS
+# IMPORTANTE: No está en PyPI, debe instalarse desde source
+# Instalar con:
+#   pip install git+https://github.com/resemble-ai/chatterbox.git
+# O versión específica:
+#   pip install git+https://github.com/resemble-ai/chatterbox.git@main
+
+# Reproducción de audio para Chatterbox-Turbo
+sounddevice>=0.4.6
+
+# Alternativa a sounddevice (más ligero):
+# simpleaudio>=1.0.4
+
+# ============================================
+# Dependencias opcionales adicionales
+# ============================================
+
+# Para voice cloning (solo si se usa audio de referencia)
+# torchaudio>=2.0.0
+
+# ============================================
+# Instalación completa (ejemplo)
+# ============================================
+# pip install torch sounddevice
+# pip install git+https://github.com/resemble-ai/chatterbox.git
+
+# ============================================
+# Verificación
+# ============================================
+# python3 -c "from chatterbox.tts_turbo import ChatterboxTurboTTS; print('OK')"
