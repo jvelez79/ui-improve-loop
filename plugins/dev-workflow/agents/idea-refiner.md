@@ -149,22 +149,78 @@ mindmap
 
 ## 2.2 Genera validation.html
 
-1. Lee el template: `${CLAUDE_PLUGIN_ROOT}/templates/mindmap-validation.html`
-2. Reemplaza `{{PROJECT_NAME}}` y `{{MERMAID_CODE}}`
-3. Guarda como `.claude/features/<slug>/validation.html`
+**⚠️ OBLIGATORIO: Usa el template y genera Mermaid REAL (NO HTML custom)**
+
+### Paso 1: Lee el template
+```bash
+cat ${CLAUDE_PLUGIN_ROOT}/templates/mindmap-validation.html
+```
+
+### Paso 2: Genera código Mermaid válido
+
+El código Mermaid debe seguir esta sintaxis EXACTA:
+```
+mindmap
+  root((Nombre del Proyecto))
+    Problema
+      descripcion del problema
+    Usuarios
+      segmento 1
+      segmento 2
+    Propuesta
+      beneficio principal
+    MVP
+      feature 1
+      feature 2
+    Riesgos
+      riesgo 1
+```
+
+**Reglas de sintaxis Mermaid:**
+- `root((texto))` - Nodo central con forma circular
+- Indentación con 2 espacios define la jerarquía
+- Texto sin comillas para nodos simples
+- NO uses backticks de markdown (` ``` `) en el código que insertas
+
+### Paso 3: Reemplaza los placeholders en el template
+- `{{PROJECT_NAME}}` → nombre del proyecto/feature
+- `{{MERMAID_CODE}}` → código Mermaid generado (SIN backticks de markdown)
+
+### Paso 4: Guarda el archivo
+- Path: `.claude/features/<slug>/validation.html`
+
+**⚠️ NUNCA generes HTML custom con cards/boxes. DEBE ser el template con diagrama Mermaid.**
 
 ## 2.3 Abre en browser
 
-Intenta Chrome primero:
+### Construye la URL correctamente
+
+**IMPORTANTE:** La URL debe usar el protocolo `file:///` (con TRES slashes, SIN https).
+
+1. Obtén el path absoluto del proyecto con `pwd`
+2. Construye la URL: `file://${PWD}/.claude/features/<slug>/validation.html`
+
+Ejemplo correcto:
+```
+file:///Users/juanca/Projects/myapp/.claude/features/my-feature/validation.html
+```
+
+Ejemplo INCORRECTO (NO hacer esto):
+```
+https://file:///...  ← MAL, no uses https
+file://...           ← MAL, faltan slashes
+```
+
+### Intenta Chrome primero:
 ```
 1. mcp__claude-in-chrome__tabs_context_mcp → verificar disponibilidad
 2. mcp__claude-in-chrome__tabs_create_mcp → crear pestaña
-3. mcp__claude-in-chrome__navigate → file:///ruta/validation.html
+3. mcp__claude-in-chrome__navigate → usar la URL construida con file:///
 ```
 
-Si Chrome no está disponible:
+### Si Chrome no está disponible:
 ```bash
-open "file:///ruta/validation.html"
+open "${PWD}/.claude/features/<slug>/validation.html"
 ```
 
 ## 2.4 Espera la decisión del usuario
