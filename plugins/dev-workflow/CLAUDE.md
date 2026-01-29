@@ -33,10 +33,12 @@ Reviewer -> Code review and approval (file tools + Bash)
 ### State Persistence
 
 State is stored in `.claude/features/<feature-slug>/`:
-- `concept.md` - Output from Idea Refiner
-- `spec.md` - Output from Spec Writer
-- `tasks.md` - Output from Task Planner
-- `review.md` - Output from Reviewer
+- `mindmap.md` - Visual concept map (Mermaid)
+- `validation.html` - Interactive validation page
+- `concept.md` - Structured requirements from Idea Refiner
+- `spec.md` - Technical specification from Spec Writer
+- `tasks.md` - Task breakdown from Task Planner
+- `review.md` - Code review from Reviewer
 
 ### Workflow Resumption
 
@@ -57,6 +59,7 @@ The workflow supports resumption from any agent using `--from <agent>`:
 | `agents/implementer.md` | Developer - writes code and tests |
 | `agents/e2e-tester.md` | QA engineer - tests in browser |
 | `agents/reviewer.md` | Senior reviewer - code review |
+| `templates/mindmap-validation.html` | Interactive validation page template |
 
 ## Plugin Commands
 
@@ -89,7 +92,7 @@ The workflow supports resumption from any agent using `--from <agent>`:
 
 | Agent | Tools |
 |-------|-------|
-| Idea Refiner | AskUserQuestion |
+| Idea Refiner | AskUserQuestion, Write, Read, Bash, Chrome MCP |
 | Spec Writer | Read, Glob, Grep, Bash |
 | Task Planner | Read, Glob, Grep |
 | Implementer | Read, Write, Edit, Bash, Glob, Grep |
@@ -99,14 +102,17 @@ The workflow supports resumption from any agent using `--from <agent>`:
 ## Agent Responsibilities
 
 ### Idea Refiner
-- Interactive dialogue with user
-- Gap analysis on requirements
-- Produces structured concept.md with:
-  - Problem/opportunity
-  - Target users
-  - MVP scope
-  - User stories
-  - Acceptance criteria
+- Interactive dialogue with user via AskUserQuestion
+- Gap analysis on requirements using checklists
+- **Visual validation with interactive mindmap:**
+  1. Generates Mermaid mindmap when checklist is covered
+  2. Opens validation page in Chrome (or system browser)
+  3. User approves/adjusts/redoes directly from browser
+  4. Agent monitors decision via Chrome tools
+- Produces:
+  - `mindmap.md` - Visual concept map
+  - `validation.html` - Interactive validation page
+  - `concept.md` - Structured requirements (after approval)
 
 ### Spec Writer
 - Analyzes existing codebase patterns

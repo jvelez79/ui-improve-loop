@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validar Concepto - {{PROJECT_NAME}}</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e4e4e7;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    .subtitle {
+      color: #a1a1aa;
+      font-size: 1rem;
+    }
+
+    .mindmap-container {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      overflow-x: auto;
+    }
+
+    .mindmap-container .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .actions-container {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .actions-title {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1;
+      min-width: 150px;
+      padding: 1rem 1.5rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    button span.label {
+      font-size: 1.1rem;
+    }
+
+    button span.desc {
+      font-size: 0.75rem;
+      opacity: 0.8;
+    }
+
+    button.approve {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+    }
+
+    button.approve:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+    }
+
+    button.adjust {
+      background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+      color: white;
+    }
+
+    button.adjust:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
+    }
+
+    button.redo {
+      background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+      color: white;
+    }
+
+    button.redo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.selected {
+      ring: 4px solid white;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5);
+    }
+
+    .feedback-section {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .feedback-section.visible {
+      display: block;
+    }
+
+    .feedback-section label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #a1a1aa;
+      font-size: 0.9rem;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 100px;
+      font-family: inherit;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    textarea::placeholder {
+      color: #71717a;
+    }
+
+    .confirm-button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .confirm-button.visible {
+      display: block;
+    }
+
+    .confirm-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+    }
+
+    .status {
+      margin-top: 2rem;
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.success {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+
+    /* Hidden data element for agent to read */
+    #validation-data {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>{{PROJECT_NAME}}</h1>
+      <p class="subtitle">Revisa el mindmap y valida si el concepto es correcto</p>
+    </header>
+
+    <div class="mindmap-container">
+      <pre class="mermaid">
+{{MERMAID_CODE}}
+      </pre>
+    </div>
+
+    <div class="actions-container">
+      <h2 class="actions-title">¿El concepto refleja correctamente tu idea?</h2>
+
+      <div class="buttons">
+        <button class="approve" onclick="selectAction('approve')">
+          <span class="label">Aprobar</span>
+          <span class="desc">Continuar al siguiente paso</span>
+        </button>
+        <button class="adjust" onclick="selectAction('adjust')">
+          <span class="label">Ajustar</span>
+          <span class="desc">Hacer cambios específicos</span>
+        </button>
+        <button class="redo" onclick="selectAction('redo')">
+          <span class="label">Rehacer</span>
+          <span class="desc">El concepto no captura la idea</span>
+        </button>
+      </div>
+
+      <div class="feedback-section" id="feedback-section">
+        <label for="feedback">¿Qué cambios necesitas? (opcional para aprobar)</label>
+        <textarea
+          id="feedback"
+          placeholder="Describe los ajustes que necesitas..."
+          oninput="updateData()"
+        ></textarea>
+      </div>
+
+      <button class="confirm-button" id="confirm-btn" onclick="confirmSelection()">
+        Confirmar decisión
+      </button>
+
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <!-- Hidden element that the agent reads to get the validation result -->
+  <div id="validation-data"
+       data-status="pending"
+       data-action=""
+       data-feedback=""
+       data-confirmed="false">
+  </div>
+
+  <script>
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+
+    let selectedAction = null;
+
+    function selectAction(action) {
+      selectedAction = action;
+
+      // Update button styles
+      document.querySelectorAll('.buttons button').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      event.currentTarget.classList.add('selected');
+
+      // Show/hide feedback section
+      const feedbackSection = document.getElementById('feedback-section');
+      const confirmBtn = document.getElementById('confirm-btn');
+
+      if (action === 'adjust' || action === 'redo') {
+        feedbackSection.classList.add('visible');
+      } else {
+        feedbackSection.classList.remove('visible');
+      }
+
+      confirmBtn.classList.add('visible');
+
+      // Update data element
+      updateData();
+    }
+
+    function updateData() {
+      const dataEl = document.getElementById('validation-data');
+      const feedback = document.getElementById('feedback').value;
+
+      dataEl.dataset.action = selectedAction || '';
+      dataEl.dataset.feedback = feedback;
+      dataEl.dataset.status = 'selecting';
+    }
+
+    function confirmSelection() {
+      if (!selectedAction) return;
+
+      const dataEl = document.getElementById('validation-data');
+      const feedback = document.getElementById('feedback').value;
+      const statusEl = document.getElementById('status');
+
+      // Update data for agent to read
+      dataEl.dataset.status = 'confirmed';
+      dataEl.dataset.action = selectedAction;
+      dataEl.dataset.feedback = feedback;
+      dataEl.dataset.confirmed = 'true';
+
+      // Show confirmation status
+      statusEl.classList.add('visible', 'success');
+
+      const messages = {
+        'approve': '¡Concepto aprobado! Puedes volver al terminal.',
+        'adjust': 'Ajustes solicitados. Puedes volver al terminal.',
+        'redo': 'Se rehará el concepto. Puedes volver al terminal.'
+      };
+
+      statusEl.textContent = messages[selectedAction];
+
+      // Disable buttons
+      document.querySelectorAll('.buttons button').forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      });
+      document.getElementById('confirm-btn').disabled = true;
+      document.getElementById('confirm-btn').style.opacity = '0.5';
+    }
+  </script>
+</body>
+</html>
