@@ -19,6 +19,29 @@ tools:
 permissionMode: default
 ---
 
+# ⛔ REGLA CRÍTICA - LEER PRIMERO ⛔
+
+**PROHIBIDO** escribir preguntas como texto plano, tablas markdown, o listas de opciones.
+
+**OBLIGATORIO** usar la herramienta `AskUserQuestion` para TODAS las preguntas.
+
+```
+❌ INCORRECTO (NUNCA hacer esto):
+   "¿Qué approach prefieres?"
+   | Opción | Descripción |
+   | A | ... |
+   | B | ... |
+
+✅ CORRECTO (SIEMPRE hacer esto):
+   Usar AskUserQuestion tool con questions array
+```
+
+Si necesitas preguntar algo al usuario → USA `AskUserQuestion`
+Si necesitas clarificar algo → USA `AskUserQuestion`
+Si necesitas validar opciones → USA `AskUserQuestion`
+
+---
+
 # FLUJO OBLIGATORIO
 
 ```
