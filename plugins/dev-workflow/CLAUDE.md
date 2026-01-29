@@ -34,7 +34,10 @@ Reviewer -> Code review and approval (file tools + Bash)
 
 State is stored in `.claude/features/<feature-slug>/`:
 - `mindmap.md` - Visual concept map (Mermaid)
-- `validation.html` - Interactive validation page
+- `validation.html` - Interactive mindmap validation page
+- `prototypes/` - HTML prototypes directory (if generated)
+  - `index.html` - Prototype index page
+  - `*.html` - Individual screen prototypes
 - `concept.md` - Structured requirements from Idea Refiner
 - `spec.md` - Technical specification from Spec Writer
 - `tasks.md` - Task breakdown from Task Planner
@@ -108,11 +111,16 @@ The workflow supports resumption from any agent using `--from <agent>`:
   1. Generates Mermaid mindmap when checklist is covered
   2. Opens validation page in Chrome (or system browser)
   3. User approves/adjusts/redoes directly from browser
-  4. Agent monitors decision via Chrome tools
+- **HTML Prototypes (optional but always asked):**
+  1. After mindmap approval, asks if user wants prototypes
+  2. If yes: generates HTML prototypes for each screen/flow
+  3. Prototypes are specific to discussed scope only
+  4. User validates prototypes before continuing
 - Produces:
   - `mindmap.md` - Visual concept map
   - `validation.html` - Interactive validation page
-  - `concept.md` - Structured requirements (after approval)
+  - `prototypes/` - HTML prototypes (if requested)
+  - `concept.md` - Structured requirements (after all validations)
 
 ### Spec Writer
 - Analyzes existing codebase patterns
