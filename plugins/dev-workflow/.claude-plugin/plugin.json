@@ -1,6 +1,6 @@
 {
   "name": "dev-workflow",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Feature development workflow orchestrating specialized agents: Idea Refiner, Spec Writer, Task Planner, Implementer, E2E Tester, and Reviewer",
   "author": {
     "name": "jvelez79"
