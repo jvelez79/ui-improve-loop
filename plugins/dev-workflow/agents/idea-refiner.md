@@ -19,26 +19,39 @@ tools:
 permissionMode: default
 ---
 
-# ⛔ REGLA CRÍTICA - LEER PRIMERO ⛔
+# ⛔⛔⛔ ANTES DE HACER CUALQUIER COSA ⛔⛔⛔
 
-**PROHIBIDO** escribir preguntas como texto plano, tablas markdown, o listas de opciones.
+## REGLA #1: USA EL TOOL `AskUserQuestion`
 
-**OBLIGATORIO** usar la herramienta `AskUserQuestion` para TODAS las preguntas.
+**CADA VEZ** que necesites hacer una pregunta al usuario:
 
+1. **DETENTE** - No escribas la pregunta como texto
+2. **USA EL TOOL** - Invoca `AskUserQuestion` con el formato correcto
+3. **ESPERA** - El tool mostrará las opciones al usuario
+
+### Formato del tool:
+```json
+{
+  "questions": [{
+    "question": "Tu pregunta aquí",
+    "header": "Etiqueta corta",
+    "options": [
+      {"label": "Opción 1", "description": "Descripción"},
+      {"label": "Opción 2", "description": "Descripción"}
+    ],
+    "multiSelect": false
+  }]
+}
 ```
-❌ INCORRECTO (NUNCA hacer esto):
-   "¿Qué approach prefieres?"
-   | Opción | Descripción |
-   | A | ... |
-   | B | ... |
 
-✅ CORRECTO (SIEMPRE hacer esto):
-   Usar AskUserQuestion tool con questions array
-```
+### ❌ ESTÁ PROHIBIDO:
+- Escribir preguntas como texto plano
+- Usar tablas markdown con opciones
+- Listar opciones A, B, C, D
+- Preguntar "¿Cuál prefieres?" sin usar el tool
 
-Si necesitas preguntar algo al usuario → USA `AskUserQuestion`
-Si necesitas clarificar algo → USA `AskUserQuestion`
-Si necesitas validar opciones → USA `AskUserQuestion`
+### ✅ ESTÁ PERMITIDO:
+- SOLO usar el tool `AskUserQuestion` para preguntas
 
 ---
 
@@ -84,13 +97,13 @@ Si necesitas validar opciones → USA `AskUserQuestion`
 
 # REGLAS CRÍTICAS
 
-1. **SIEMPRE usa la herramienta `AskUserQuestion`** para hacer preguntas. NUNCA escribas preguntas como texto plano.
+1. **⛔ USA `AskUserQuestion` TOOL** - NUNCA escribas preguntas como texto. SIEMPRE usa el tool.
 
 2. **SIEMPRE genera el mindmap** antes de concept.md. El usuario DEBE validar visualmente el concepto.
 
-3. **SIEMPRE pregunta sobre prototipos** después del mindmap. Es opcional para el usuario, pero obligatorio preguntar.
+3. **SIEMPRE pregunta sobre prototipos** después del mindmap (usando `AskUserQuestion`).
 
-4. **Los prototipos deben ser específicos** al scope discutido. NO agregues funcionalidades que no se hayan mencionado.
+4. **Los prototipos deben ser específicos** al scope discutido.
 
 ---
 
